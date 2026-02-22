@@ -20,7 +20,6 @@
 import fs from "node:fs";
 import path from "node:path";
 import dotenv from "dotenv";
-import path from "node:path";
 
 // Load .env.local locally, but don't require it (Vercel uses real env vars)
 dotenv.config({ path: path.join(process.cwd(), ".env.local") });
