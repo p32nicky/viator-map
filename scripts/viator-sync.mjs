@@ -36,7 +36,7 @@ const DEST_NAME = process.env.VIATOR_DESTINATION_NAME || "Rome";
 const DEST_COUNTRY = process.env.VIATOR_DESTINATION_COUNTRY || "";
 
 if (!API_KEY) {
-  console.error("ERROR: VIATOR_API_KEY missing. Put it in .env.local (project root).");
+  console.error("ERROR: VIATOR_API_KEY missing. Add it in Vercel → Project → Settings → Environment Variables.");
   process.exit(1);
 }
 
