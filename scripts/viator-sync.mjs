@@ -1,3 +1,4 @@
+console.log("VIATOR SYNC RUNNING: viator-sync.mjs ✅ COMMIT-FINGERPRINT-2026-02-22-1638");
 import fs from "node:fs";
 import path from "node:path";
 
