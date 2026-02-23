@@ -22,7 +22,6 @@ async function viatorFetch(url, { method = "GET", body } = {}) {
     headers: {
       "Accept-Language": "en-US",
       "Content-Type": "application/json",
-      // v2 header:
       Accept: "application/json;version=2.0",
       "exp-api-key": API_KEY,
     },
@@ -30,9 +29,7 @@ async function viatorFetch(url, { method = "GET", body } = {}) {
   });
 
   const text = await res.text().catch(() => "");
-  if (!res.ok) {
-    throw new Error(`Viator API ${res.status} @ ${url}: ${text.slice(0, 2000)}`);
-  }
+  if (!res.ok) throw new Error(`Viator API ${res.status} @ ${url}: ${text.slice(0, 2000)}`);
   return text ? JSON.parse(text) : null;
 }
 
@@ -45,19 +42,8 @@ function normalizeProduct(p) {
     p?.primaryImageUrl ||
     "";
 
-  const lat =
-    p?.location?.lat ??
-    p?.location?.latitude ??
-    p?.latitude ??
-    p?.lat ??
-    null;
-
-  const lng =
-    p?.location?.lng ??
-    p?.location?.longitude ??
-    p?.longitude ??
-    p?.lng ??
-    null;
+  const lat = p?.location?.lat ?? p?.location?.latitude ?? p?.latitude ?? p?.lat ?? null;
+  const lng = p?.location?.lng ?? p?.location?.longitude ?? p?.longitude ?? p?.lng ?? null;
 
   const affiliateUrl = p?.productUrl || p?.bookingUrl || p?.url || "";
 
@@ -85,11 +71,7 @@ async function main() {
   while (true) {
     const data = await viatorFetch(url, {
       method: "POST",
-      body: {
-        destinationId: Number(DESTINATION_ID),
-        page,
-        count: pageSize,
-      },
+      body: { destinationId: Number(DESTINATION_ID), page, count: pageSize },
     });
 
     const products = data?.products || data?.data?.products || data?.items || [];
@@ -99,8 +81,7 @@ async function main() {
 
     if (products.length < pageSize) break;
     page += 1;
-
-    if (page > 50) break; // safety cap
+    if (page > 50) break;
   }
 
   fs.writeFileSync(OUT_FILE, JSON.stringify(all, null, 2));
