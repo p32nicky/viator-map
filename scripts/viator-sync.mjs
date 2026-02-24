@@ -4,8 +4,9 @@ import path from "node:path";
 /**
  * Viator sync for Vercel build
  * - Uses /partner/products/search
- * - Uses required filtering.destinationIds
- * - Uses start/count pagination (count <= 50)
+ * - Required: filtering.destinationIds
+ * - Uses start/count pagination
+ * - No sorting field (default server sort)
  * - Writes data/items.json
  */
 
@@ -76,7 +77,7 @@ async function main() {
 
   const url = "https://api.viator.com/partner/products/search";
 
-  // Viator guidance: count max 50 for search endpoints. :contentReference[oaicite:1]{index=1}
+  // Keep <= 50 to avoid API constraints
   const count = 50;
 
   let start = 1;
@@ -87,8 +88,6 @@ async function main() {
       filtering: {
         destinationIds: [DESTINATION_ID],
       },
-      // Safe default sort used by Viator search
-      sorting: "DEFAULT",
       currency: CURRENCY,
       language: LANGUAGE,
       start,
@@ -103,9 +102,10 @@ async function main() {
     for (const p of products) all.push(normalizeProduct(p));
 
     if (products.length < count) break;
+
     start += count;
 
-    // safety cap
+    // safety cap so builds never hang
     if (start > 2000) break;
   }
 
