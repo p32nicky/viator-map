@@ -2,139 +2,160 @@ import fs from "node:fs";
 import path from "node:path";
 
 /**
- * VERCEL-SAFE VIATOR SYNC
- * - NO taxonomy calls
- * - v2 products search only
- * - requires currency + language
- * - writes data/items.json at build time
+ * Viator sync for Next.js / Vercel
+ * - Calls /partner/products/search
+ * - Includes currency + language
+ * - Uses new "filtering" payload shape, with fallback to legacy payload shape
+ * - Writes data/items.json
  */
 
 const ROOT = process.cwd();
 const DATA_DIR = path.join(ROOT, "data");
 const OUT_FILE = path.join(DATA_DIR, "items.json");
 
-// ---- ENV (provided by Vercel) ----
+// Env
 const API_KEY = process.env.VIATOR_API_KEY;
 const DESTINATION_ID = process.env.VIATOR_DESTINATION_ID || "511";
 const CAMPAIGN = process.env.VIATOR_CAMPAIGN || "rome_map";
 const CURRENCY = process.env.VIATOR_CURRENCY || "USD";
 const LANGUAGE = process.env.VIATOR_LANGUAGE || "en-US";
 
-// ---- SAFETY CHECKS ----
 if (!API_KEY) {
-  console.error("ERROR: VIATOR_API_KEY missing (set in Vercel Environment Variables)");
+  console.error("ERROR: VIATOR_API_KEY missing (set in Vercel Environment Variables).");
   process.exit(1);
 }
 
-// Ensure data directory exists
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
-// ---- VIATOR FETCH (v2 ONLY) ----
-async function viatorFetch(url, body) {
+async function postJson(url, body) {
   const res = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "Accept-Language": LANGUAGE,
-      "Accept": "application/json;version=2.0",
+      Accept: "application/json;version=2.0",
       "exp-api-key": API_KEY,
     },
     body: JSON.stringify(body),
   });
 
-  const text = await res.text();
+  const text = await res.text().catch(() => "");
 
   if (!res.ok) {
-    throw new Error(
-      `Viator API ${res.status} @ ${url}: ${text.slice(0, 2000)}`
-    );
+    // Keep the raw body for debugging / fallback logic
+    const err = new Error(`Viator API ${res.status} @ ${url}: ${text.slice(0, 2000)}`);
+    err.status = res.status;
+    err.bodyText = text;
+    throw err;
   }
 
-  return JSON.parse(text);
+  return text ? JSON.parse(text) : {};
 }
 
-// ---- NORMALIZE PRODUCT FOR MAP/UI ----
+// Normalize product into your UI item shape
 function normalizeProduct(p) {
-  const id = p.productCode || p.code || p.id;
+  const id = p?.productCode ?? p?.code ?? p?.id ?? null;
 
   const imageUrl =
-    p.images?.[0]?.variants?.[0]?.url ||
-    p.images?.[0]?.url ||
-    p.primaryImageUrl ||
+    p?.images?.[0]?.variants?.[0]?.url ||
+    p?.images?.[0]?.url ||
+    p?.primaryImageUrl ||
     "";
 
-  const lat =
-    p.location?.lat ??
-    p.location?.latitude ??
-    p.latitude ??
-    null;
-
-  const lng =
-    p.location?.lng ??
-    p.location?.longitude ??
-    p.longitude ??
-    null;
+  const lat = p?.location?.lat ?? p?.location?.latitude ?? p?.latitude ?? p?.lat ?? null;
+  const lng = p?.location?.lng ?? p?.location?.longitude ?? p?.longitude ?? p?.lng ?? null;
 
   return {
     id,
-    title: p.title || p.name || "",
-    category: p.primaryCategoryName || "Rome",
+    title: p?.title ?? p?.name ?? "",
+    category: p?.primaryCategoryName ?? p?.category ?? "Rome",
     imageUrl,
-    affiliateUrl: p.productUrl || p.bookingUrl || p.url || "",
+    affiliateUrl: p?.productUrl || p?.bookingUrl || p?.url || "",
     lat: typeof lat === "number" ? lat : null,
     lng: typeof lng === "number" ? lng : null,
     campaign: CAMPAIGN,
   };
 }
 
-// ---- MAIN SYNC ----
-async function main() {
-  console.log("Viator sync starting");
-  console.log("Destination:", DESTINATION_ID);
-  console.log("Currency:", CURRENCY);
-
+/**
+ * Some Viator accounts/environments expect:
+ *   { filtering: { destinationId }, currency, language, page, count }
+ * Others expect older:
+ *   { destinationId, currency, language, page, count }
+ *
+ * We try the NEW one first. If Viator rejects it, we fallback.
+ */
+async function productsSearch({ page, count }) {
   const url = "https://api.viator.com/partner/products/search";
-  const pageSize = 200;
 
-  let page = 1;
-  const allItems = [];
-
-  while (true) {
-    const payload = {
+  const newPayload = {
+    filtering: {
       destinationId: Number(DESTINATION_ID),
-      page,
-      count: pageSize,
+    },
+    currency: CURRENCY,
+    language: LANGUAGE,
+    page,
+    count,
+  };
+
+  try {
+    return await postJson(url, newPayload);
+  } catch (e) {
+    const msg = String(e?.bodyText || e?.message || "");
+
+    // Only fallback on schema-ish 400s
+    const shouldFallback =
+      (e?.status === 400) &&
+      (
+        msg.includes("Missing filtering") ||
+        msg.includes("Unrecognized field") ||
+        msg.includes("Unknown") ||
+        msg.includes("BAD_REQUEST")
+      );
+
+    if (!shouldFallback) throw e;
+
+    const legacyPayload = {
+      destinationId: Number(DESTINATION_ID),
       currency: CURRENCY,
       language: LANGUAGE,
+      page,
+      count,
     };
 
-    const data = await viatorFetch(url, payload);
+    return await postJson(url, legacyPayload);
+  }
+}
 
-    const products =
-      data.products ||
-      data.data?.products ||
-      data.items ||
-      [];
+async function main() {
+  console.log("Viator sync starting");
+  console.log("destinationId:", DESTINATION_ID, "| currency:", CURRENCY, "| language:", LANGUAGE);
 
+  const pageSize = 200;
+  let page = 1;
+
+  const all = [];
+
+  while (true) {
+    const data = await productsSearch({ page, count: pageSize });
+
+    const products = data?.products || data?.data?.products || data?.items || [];
     if (!Array.isArray(products) || products.length === 0) break;
 
-    for (const p of products) {
-      allItems.push(normalizeProduct(p));
-    }
+    for (const p of products) all.push(normalizeProduct(p));
 
     if (products.length < pageSize) break;
-    page++;
+    page += 1;
 
-    // Safety cap so builds never hang
+    // Safety cap so Vercel builds never hang
     if (page > 50) break;
   }
 
-  fs.writeFileSync(OUT_FILE, JSON.stringify(allItems, null, 2));
-  console.log("DONE. Wrote", OUT_FILE, "| items:", allItems.length);
+  fs.writeFileSync(OUT_FILE, JSON.stringify(all, null, 2));
+  console.log("DONE. Wrote", OUT_FILE, "| items:", all.length);
 }
 
-// ---- RUN ----
 main().catch((err) => {
-  console.error("FAIL:", err.message || err);
+  console.error("FAIL:", err?.message || err);
   process.exit(1);
 });
