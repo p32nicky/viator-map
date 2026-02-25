@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+	  "prebuild": "node scripts/csv-to-items.mjs",
     "sync:viator": "node scripts/viator-sync.mjs",
     "prebuild": "node scripts/viator-sync.mjs",
     "build": "next build"
