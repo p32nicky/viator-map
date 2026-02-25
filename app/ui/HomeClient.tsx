@@ -6,7 +6,7 @@ import MapView from "@/app/ui/MapView";
 import DetailDrawer from "@/app/ui/DetailDrawer";
 
 export type Item = {
-  id: string;
+  id: string | number;
   title: string;
   imageUrl?: string | null;
   affiliateUrl: string;
