@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import MapView from "./MapView";
-import SidebarList from "./SidebarList";
-import DetailDrawer from "./DetailDrawer";
+import SidebarList from "@/app/ui/SidebarList";
+import MapView from "@/app/ui/MapView";
+import DetailDrawer from "@/app/ui/DetailDrawer";
 
 export type Item = {
   id: string;
