@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from "react";
 import Fuse from "fuse.js";
-import SidebarList from "./SidebarList";
-import MapView from "./MapView";
-import DetailDrawer from "./DetailDrawer";
+import SidebarList from "@/app/ui/SidebarList";
+import MapView from "@/app/ui/MapView";
+import DetailDrawer from "@/app/ui/DetailDrawer";
 
 type Item = {
   id: string | number;
