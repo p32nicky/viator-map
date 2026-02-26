@@ -1,5 +1,5 @@
 "use client";
-
+import type { Item } from "@/lib/types";
 import { MapContainer, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -10,16 +10,6 @@ import "leaflet.markercluster";
 
 import { useEffect, useMemo, useRef } from "react";
 
-type Item = {
-  id: number | string;
-  title: string;
-  imageUrl: string;
-  affiliateUrl: string;
-  category: string;
-  lat?: number | null;
-  lng?: number | null;
-  landmark?: string | null;
-};
 
 function hasCoords(it: Item) {
   return typeof it.lat === "number" && typeof it.lng === "number";
