@@ -14,7 +14,7 @@ export function slugifyCategory(s: string) {
     .replace(/(^-|-$)/g, "");
 }
 
-export function unslugifyCategory(slug: string) {
+export function unslugifyCategory(slug: string, _items?: unknown) {
   const s = String(slug || "").replace(/-/g, " ").trim();
   return s ? s.replace(/\b\w/g, (c) => c.toUpperCase()) : s;
 }
