@@ -2,56 +2,43 @@ import fs from "node:fs";
 import path from "node:path";
 import type { Item } from "@/lib/types";
 
-export type Item = {
-  id: string | number;
-  title: string;
-  imageUrl: string;
-  affiliateUrl: string;
-  category: string;
-  lat?: number | null;
-  lng?: number | null;
-  landmark?: string | null;
-};
-
-function readJsonIfExists(p: string): any[] | null {
-  try {
-    if (!fs.existsSync(p)) return null;
-    const raw = fs.readFileSync(p, "utf8");
-    const data = JSON.parse(raw);
-    return Array.isArray(data) ? data : null;
-  } catch {
-    return null;
-  }
-}
+const DATA_DIR = path.join(process.cwd(), "data");
 
 export function readItems(): Item[] {
-  const root = process.cwd();
-  const geo = path.join(root, "data", "items.geo.json");
-  const raw = path.join(root, "data", "items.json");
+  const geoPath = path.join(DATA_DIR, "items.geo.json");
+  const jsonPath = path.join(DATA_DIR, "items.json");
 
-  const geoItems = readJsonIfExists(geo);
-  if (geoItems && geoItems.length) return geoItems as Item[];
+  const filePath = fs.existsSync(geoPath)
+    ? geoPath
+    : fs.existsSync(jsonPath)
+    ? jsonPath
+    : null;
 
-  const rawItems = readJsonIfExists(raw);
-  return (rawItems ?? []) as Item[];
-}
+  if (!filePath) return [];
 
-export function slugifyCategory(cat: string): string {
-  return cat
-    .toLowerCase()
-    .trim()
-    .replace(/&/g, "and")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
+  const raw = fs.readFileSync(filePath, "utf-8");
+  const data = JSON.parse(raw);
 
-export function unslugifyCategory(slug: string, items: Item[]): string {
-  // Find best category match from items by slug
-  const cats = Array.from(new Set(items.map(i => i.category).filter(Boolean)));
-  const map = new Map(cats.map(c => [slugifyCategory(c), c]));
-  return map.get(slug) ?? slug;
-}
+  // If GeoJSON FeatureCollection
+  if (data.type === "FeatureCollection" && Array.isArray(data.features)) {
+    return data.features.map((f: any): Item => ({
+      id: f.properties.id,
+      title: f.properties.title,
+      affiliateUrl: f.properties.affiliateUrl,
 
-export function uniqueCategories(items: Item[]): string[] {
-  return Array.from(new Set(items.map(i => i.category).filter(Boolean))).sort();
+      category: f.properties.category,
+      location: f.properties.location,
+      imageUrl: f.properties.imageUrl ?? null,
+
+      lat: f.geometry?.coordinates?.[1] ?? null,
+      lng: f.geometry?.coordinates?.[0] ?? null,
+    }));
+  }
+
+  // Plain array fallback
+  if (Array.isArray(data)) {
+    return data as Item[];
+  }
+
+  return [];
 }
