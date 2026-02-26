@@ -57,3 +57,16 @@ export function readItems(): Item[] {
 
   return [];
 }
+
+export function uniqueCategories(items?: Item[]) {
+  const list = items ?? readItems();
+  const set = new Set<string>();
+
+  for (const it of list) {
+    if (it.category && String(it.category).trim()) {
+      set.add(String(it.category).trim());
+    }
+  }
+
+  return Array.from(set).sort((a, b) => a.localeCompare(b));
+}
