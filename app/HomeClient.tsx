@@ -2,11 +2,13 @@
 
 import { useMemo, useState } from "react";
 import Fuse from "fuse.js";
+import dynamic from "next/dynamic";
 
 import SidebarList from "@/app/ui/SidebarList";
-import MapView from "@/app/ui/MapView";
 import DetailDrawer from "@/app/ui/DetailDrawer";
 import type { Item } from "@/lib/types";
+
+const MapView = dynamic(() => import("@/app/ui/MapView"), { ssr: false });
 
 export default function HomeClient({ items }: { items: Item[] }) {
   const [selected, setSelected] = useState<Item | null>(null);
@@ -33,17 +35,15 @@ export default function HomeClient({ items }: { items: Item[] }) {
   const onSelect = (it: Item) => {
     setSelected(it);
     if (it.lat == null || it.lng == null) {
+      // only runs in browser due to click
       if (it.affiliateUrl) window.open(it.affiliateUrl, "_blank", "noopener,noreferrer");
     }
   };
 
   return (
     <div style={{ display: "flex", height: "100vh", width: "100%", overflow: "hidden" }}>
-      {/* SidebarList already has its own search UI; we pass filtered items */}
       <SidebarList items={filteredItems} selectedId={selected?.id ?? null} onSelect={onSelect} />
-
       <MapView items={mapItems} selectedId={selected?.id ?? null} onSelect={onSelect} />
-
       <DetailDrawer item={selected} onClose={() => setSelected(null)} />
 
       <a
