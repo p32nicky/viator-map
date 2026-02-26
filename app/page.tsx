@@ -1,4 +1,4 @@
-import HomeClient from "./ui/HomeClient";
+import HomeClient from "./HomeClient";
 import { readItems } from "@/lib/data";
 
 export const runtime = "nodejs";
