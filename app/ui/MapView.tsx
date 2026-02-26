@@ -130,7 +130,7 @@ function ClusteredMarkers({
       marker.bindPopup(`
         <div style="font-weight:700;font-size:13px;">${escapeHtml(it.title)}</div>
         <div style="font-size:12px;opacity:.75;margin-top:4px;">
-          ${escapeHtml(it.category)}${it.landmark ? " • " + escapeHtml(it.landmark) : ""}
+          ${escapeHtml(it.category ?? "Tour")}${it.landmark ? " • " + escapeHtml(it.landmark) : ""}
         </div>
         <div style="font-size:12px;margin-top:8px;">(Click marker to open link)</div>
       `);
