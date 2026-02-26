@@ -1,112 +1,138 @@
 "use client";
 
-type Item = {
-  id: string | number;
-  title: string;
-  imageUrl: string;
-  affiliateUrl: string;
-  category: string;
-  lat?: number | null;
-  lng?: number | null;
-  landmark?: string | null;
-};
-
-function hasCoords(it: Item) {
-  return typeof it.lat === "number" && typeof it.lng === "number";
-}
+import { useMemo, useState } from "react";
+import Fuse from "fuse.js";
+import type { Item } from "@/lib/types";
 
 export default function SidebarList({
   items,
-  selectedId,
-  query,
-  onQueryChange,
   onSelect,
-  counts,
+  selectedId,
 }: {
   items: Item[];
-  selectedId: Item["id"] | null;
-  query: string;
-  onQueryChange: (v: string) => void;
   onSelect: (item: Item) => void;
-  counts: { total: number; onMap: number; noPin: number };
+  selectedId: Item["id"] | null;
 }) {
+  const [query, setQuery] = useState("");
+
+  const fuse = useMemo(() => {
+    return new Fuse(items, {
+      keys: ["title", "category", "location"],
+      threshold: 0.35,
+      ignoreLocation: true,
+    });
+  }, [items]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim();
+    if (!q) return items;
+    return fuse.search(q).map((r) => r.item);
+  }, [items, fuse, query]);
+
   return (
     <aside
       style={{
+        width: 360,
         borderRight: "1px solid rgba(0,0,0,0.12)",
         height: "100vh",
+        overflow: "hidden",
         display: "flex",
         flexDirection: "column",
-        background: "white",
+        background: "#fff",
       }}
     >
-      <div style={{ padding: 14 }}>
-        <div style={{ fontWeight: 850, fontSize: 18 }}>Rome Map</div>
-
+      <div style={{ padding: 12 }}>
+        <div style={{ fontWeight: 700, fontSize: 16 }}>Rome tours</div>
         <input
           value={query}
-          onChange={(e) => onQueryChange(e.target.value)}
-          placeholder="Search tours, Vatican, Colosseum…"
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search tours..."
           style={{
-            width: "100%",
             marginTop: 10,
+            width: "100%",
             padding: "10px 12px",
-            borderRadius: 12,
+            borderRadius: 10,
             border: "1px solid rgba(0,0,0,0.18)",
             outline: "none",
           }}
         />
-
-        <div style={{ marginTop: 10, fontSize: 12, opacity: 0.75 }}>
-          Showing <strong>{counts.total.toLocaleString()}</strong> • On map{" "}
-          <strong>{counts.onMap.toLocaleString()}</strong> • No pin{" "}
-          <strong>{counts.noPin.toLocaleString()}</strong>
+        <div style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>
+          Showing {filtered.length.toLocaleString()} of{" "}
+          {items.length.toLocaleString()}
         </div>
       </div>
 
-      <div style={{ overflow: "auto", padding: "0 10px 14px" }}>
-        {items.map((it) => {
-          const selected = selectedId !== null && String(selectedId) === String(it.id);
-          const pinned = hasCoords(it);
+      <div style={{ flex: 1, overflowY: "auto", padding: 8 }}>
+        {filtered.map((item) => {
+          const isSelected = selectedId != null && String(item.id) === String(selectedId);
+
+          const subtitle =
+            item.category || item.location || "Tour";
 
           return (
             <button
-              key={String(it.id)}
-              onClick={() => onSelect(it)}
+              key={String(item.id)}
+              onClick={() => onSelect(item)}
               style={{
                 width: "100%",
                 textAlign: "left",
-                background: selected ? "rgba(0,0,0,0.06)" : "white",
+                display: "flex",
+                gap: 10,
+                padding: 10,
+                borderRadius: 12,
                 border: "1px solid rgba(0,0,0,0.10)",
-                borderRadius: 16,
-                padding: 12,
-                marginBottom: 10,
+                background: isSelected ? "rgba(0,0,0,0.06)" : "#fff",
                 cursor: "pointer",
+                marginBottom: 8,
               }}
             >
-              <div style={{ fontWeight: 800, lineHeight: 1.25 }}>{it.title}</div>
-
-              <div style={{ marginTop: 6, fontSize: 12, opacity: 0.75 }}>
-                {it.category}
-                {it.landmark ? ` • ${it.landmark}` : ""}
+              <div
+                style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 10,
+                  flex: "0 0 auto",
+                  background: "rgba(0,0,0,0.06)",
+                  overflow: "hidden",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 11,
+                  opacity: 0.8,
+                }}
+              >
+                {item.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={item.imageUrl}
+                    alt={item.title}
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                ) : (
+                  "No image"
+                )}
               </div>
 
-              {!pinned ? (
+              <div style={{ minWidth: 0 }}>
                 <div
                   style={{
-                    marginTop: 10,
-                    display: "inline-flex",
-                    fontSize: 11,
-                    fontWeight: 800,
-                    padding: "6px 10px",
-                    borderRadius: 999,
-                    border: "1px solid rgba(0,0,0,0.18)",
-                    background: "rgba(255, 230, 0, 0.20)",
+                    fontWeight: 700,
+                    fontSize: 13,
+                    lineHeight: 1.25,
+                    marginBottom: 4,
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
                   }}
                 >
-                  No map pin (opens link)
+                  {item.title}
                 </div>
-              ) : null}
+                <div style={{ fontSize: 12, opacity: 0.7 }}>{subtitle}</div>
+                <div style={{ fontSize: 11, opacity: 0.55, marginTop: 4 }}>
+                  {item.lat != null && item.lng != null ? "Has map pin" : "Opens link"}
+                </div>
+              </div>
             </button>
           );
         })}
