@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import type { Item } from "@/lib/types";
 
 export type Item = {
   id: string | number;
