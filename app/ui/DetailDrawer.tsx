@@ -1,48 +1,97 @@
 "use client";
 
-type Item = {
-  id: number | string;
-  title: string;
-  imageUrl: string;
-  affiliateUrl: string;
-  category: string;
-  lat?: number | null;
-  lng?: number | null;
-  landmark?: string | null;
-};
+import type { Item } from "@/lib/types";
 
-export default function DetailDrawer({ item, onClose }: { item: Item | null; onClose: () => void }) {
+export default function DetailDrawer({
+  item,
+  onClose,
+}: {
+  item: Item | null;
+  onClose: () => void;
+}) {
   if (!item) return null;
 
   return (
-    <div className="drawer">
-      <div className="drawerHeader">
-        <div>
-          <div className="drawerTitle">{item.title}</div>
-          <div className="drawerMeta">
-            {item.category}
-            {item.landmark ? ` • ${item.landmark}` : ""}
-          </div>
+    <div
+      style={{
+        position: "fixed",
+        right: 12,
+        top: 12,
+        bottom: 12,
+        width: 380,
+        maxWidth: "calc(100vw - 24px)",
+        background: "rgba(255,255,255,0.98)",
+        border: "1px solid rgba(0,0,0,0.12)",
+        borderRadius: 16,
+        boxShadow: "0 10px 30px rgba(0,0,0,0.12)",
+        overflow: "hidden",
+        zIndex: 9999,
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <div style={{ padding: 12, display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ fontWeight: 800, fontSize: 14, lineHeight: 1.2, flex: 1 }}>
+          {item.title}
         </div>
-        <button onClick={onClose} className="btn">Close</button>
+        <button
+          onClick={onClose}
+          style={{
+            border: "1px solid rgba(0,0,0,0.14)",
+            background: "#fff",
+            borderRadius: 10,
+            padding: "6px 10px",
+            cursor: "pointer",
+            fontSize: 12,
+          }}
+        >
+          Close
+        </button>
       </div>
 
-      <div className="drawerBody">
-        {item.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img className="drawerImg" src={item.imageUrl} alt={item.title} loading="lazy" />
-        ) : null}
+      {item.imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={item.imageUrl}
+          alt={item.title}
+          style={{
+            width: "100%",
+            height: 190,
+            objectFit: "cover",
+            borderTop: "1px solid rgba(0,0,0,0.08)",
+            borderBottom: "1px solid rgba(0,0,0,0.08)",
+          }}
+        />
+      ) : null}
+
+      <div style={{ padding: 12, overflowY: "auto" }}>
+        <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 10 }}>
+          {(item.category || item.location || "Tour") +
+            (item.lat != null && item.lng != null ? " • Has map pin" : " • Opens link")}
+        </div>
 
         <a
-          className="cta"
           href={item.affiliateUrl}
           target="_blank"
-          rel="nofollow sponsored noopener noreferrer"
+          rel="noopener noreferrer"
+          style={{
+            display: "inline-block",
+            width: "100%",
+            textAlign: "center",
+            background: "black",
+            color: "white",
+            padding: "10px 12px",
+            borderRadius: 12,
+            textDecoration: "none",
+            fontWeight: 800,
+          }}
         >
           View on Viator
         </a>
 
-        <div className="note">Tip: always double-check details on the provider page before booking.</div>
+        <div style={{ marginTop: 12, fontSize: 11, opacity: 0.7, lineHeight: 1.35 }}>
+          Affiliate disclosure: if you click and book, you may support this site at no extra cost to you.
+        </div>
       </div>
     </div>
   );
