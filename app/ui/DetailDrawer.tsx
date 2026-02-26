@@ -11,6 +11,8 @@ export default function DetailDrawer({
 }) {
   if (!item) return null;
 
+  const hasPins = item.lat != null && item.lng != null;
+
   return (
     <div
       style={{
@@ -66,16 +68,17 @@ export default function DetailDrawer({
 
       <div style={{ padding: 12, overflowY: "auto" }}>
         <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 10 }}>
-          {(item.category || item.location || "Tour") +
-            (item.lat != null && item.lng != null ? " • Has map pin" : " • Opens link")}
+          {[item.category, item.location].filter(Boolean).join(" • ") || "Tour"}
+          {hasPins ? " • 📍 On map" : ""}
         </div>
 
+        {/* This is the ONE place the affiliate link opens — explicit user intent */}
         <a
           href={item.affiliateUrl}
           target="_blank"
-          rel="noopener noreferrer"
+          rel="nofollow sponsored noopener noreferrer"
           style={{
-            display: "inline-block",
+            display: "block",
             width: "100%",
             textAlign: "center",
             background: "black",
@@ -84,9 +87,10 @@ export default function DetailDrawer({
             borderRadius: 12,
             textDecoration: "none",
             fontWeight: 800,
+            boxSizing: "border-box",
           }}
         >
-          View on Viator
+          View on Viator →
         </a>
 
         <div style={{ marginTop: 12, fontSize: 11, opacity: 0.7, lineHeight: 1.35 }}>

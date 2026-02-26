@@ -1,34 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Fuse from "fuse.js";
 import type { Item } from "@/lib/types";
 
 export default function SidebarList({
   items,
   onSelect,
   selectedId,
+  query,
+  onQueryChange,
 }: {
   items: Item[];
   onSelect: (item: Item) => void;
   selectedId: Item["id"] | null;
+  query: string;
+  onQueryChange: (q: string) => void;
 }) {
-  const [query, setQuery] = useState("");
-
-  const fuse = useMemo(() => {
-    return new Fuse(items, {
-      keys: ["title", "category", "location"],
-      threshold: 0.35,
-      ignoreLocation: true,
-    });
-  }, [items]);
-
-  const filtered = useMemo(() => {
-    const q = query.trim();
-    if (!q) return items;
-    return fuse.search(q).map((r) => r.item);
-  }, [items, fuse, query]);
-
   return (
     <aside
       style={{
@@ -45,7 +31,7 @@ export default function SidebarList({
         <div style={{ fontWeight: 700, fontSize: 16 }}>Rome tours</div>
         <input
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => onQueryChange(e.target.value)}
           placeholder="Search tours..."
           style={{
             marginTop: 10,
@@ -54,20 +40,20 @@ export default function SidebarList({
             borderRadius: 10,
             border: "1px solid rgba(0,0,0,0.18)",
             outline: "none",
+            boxSizing: "border-box",
           }}
         />
         <div style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>
-          Showing {filtered.length.toLocaleString()} of{" "}
-          {items.length.toLocaleString()}
+          Showing {items.length.toLocaleString()} results
         </div>
       </div>
 
       <div style={{ flex: 1, overflowY: "auto", padding: 8 }}>
-        {filtered.map((item) => {
-          const isSelected = selectedId != null && String(item.id) === String(selectedId);
-
-          const subtitle =
-            item.category || item.location || "Tour";
+        {items.map((item) => {
+          const isSelected =
+            selectedId != null && String(item.id) === String(selectedId);
+          const subtitle = item.category || item.location || "Tour";
+          const hasPins = item.lat != null && item.lng != null;
 
           return (
             <button
@@ -80,7 +66,9 @@ export default function SidebarList({
                 gap: 10,
                 padding: 10,
                 borderRadius: 12,
-                border: "1px solid rgba(0,0,0,0.10)",
+                border: isSelected
+                  ? "1px solid rgba(0,0,0,0.30)"
+                  : "1px solid rgba(0,0,0,0.10)",
                 background: isSelected ? "rgba(0,0,0,0.06)" : "#fff",
                 cursor: "pointer",
                 marginBottom: 8,
@@ -130,7 +118,7 @@ export default function SidebarList({
                 </div>
                 <div style={{ fontSize: 12, opacity: 0.7 }}>{subtitle}</div>
                 <div style={{ fontSize: 11, opacity: 0.55, marginTop: 4 }}>
-                  {item.lat != null && item.lng != null ? "Has map pin" : "Opens link"}
+                  {hasPins ? "📍 On map" : "No map pin"}
                 </div>
               </div>
             </button>
